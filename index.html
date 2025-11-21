@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS2 Case Simulator</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 CS2 Case Simulator</h1>
+            <p>Открывай кейсы и собирай коллекцию!</p>
+        </div>
+
+        <div class="balance-card">
+            <div>Ваш баланс</div>
+            <div class="balance-amount" id="balance">5000₽</div>
+        </div>
+
+        <div class="cases-grid">
+            <div class="case-card" data-case="weapon">
+                <h3>🟡 Оружейный кейс</h3>
+                <p>Различное оружие CS2</p>
+                <div class="case-price">500₽</div>
+            </div>
+
+            <div class="case-card" data-case="premium">
+                <h3>💎 Премиум кейс</h3>
+                <p>Только редкие предметы</p>
+                <div class="case-price">1000₽</div>
+            </div>
+
+            <div class="case-card" data-case="knife">
+                <h3>🔪 Кейс с ножами</h3>
+                <p>Шанс выбить легендарный нож!</p>
+                <div class="case-price">2000₽</div>
+            </div>
+        </div>
+
+        <button class="open-btn" id="openBtn">🎁 Выберите кейс</button>
+        <button class="inventory-btn" id="inventoryBtn">🎒 Мой инвентарь</button>
+        <button class="stats-btn" id="statsBtn">📊 Статистика</button>
+    </div>
+
+    <!-- Экран открытия кейса -->
+    <div class="case-opening" id="caseOpening">
+        <div class="case-content">
+            <h2 id="openingText">Открываем кейс...</h2>
+            <div class="item-reveal" id="itemReveal" style="display: none;">
+                <h3 id="itemName"></h3>
+                <p id="itemRarity"></p>
+                <p id="itemWear"></p>
+                <p id="itemPrice"></p>
+                <button class="continue-btn" id="continueBtn">Продолжить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Инвентарь -->
+    <div class="inventory-screen" id="inventoryScreen">
+        <div class="inventory-header">
+            <h2>🎒 Мой инвентарь</h2>
+            <button class="back-btn" id="inventoryBack">← Назад</button>
+        </div>
+        <div class="inventory-list" id="inventoryList"></div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-screen" id="statsScreen">
+        <div class="stats-header">
+            <h2>📊 Статистика</h2>
+            <button class="back-btn" id="statsBack">← Назад</button>
+        </div>
+        <div class="stats-content" id="statsContent"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

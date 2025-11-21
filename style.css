@@ -1,0 +1,229 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, #1a1f2e, #2d3748);
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    font-size: 1.8em;
+    margin-bottom: 10px;
+    background: linear-gradient(45deg, #ff6b35, #f7931e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.balance-card {
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    text-align: center;
+}
+
+.balance-amount {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
+
+.cases-grid {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.case-card {
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    backdrop-filter: blur(10px);
+}
+
+.case-card:hover {
+    transform: translateY(-5px);
+    border-color: #ffd700;
+    box-shadow: 0 10px 20px rgba(255,215,0,0.2);
+}
+
+.case-card.selected {
+    border-color: #ff6b35;
+    background: rgba(255,107,53,0.2);
+}
+
+.case-price {
+    color: #ffd700;
+    font-weight: bold;
+    margin-top: 10px;
+    font-size: 1.2em;
+}
+
+.open-btn, .inventory-btn, .stats-btn {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 12px;
+}
+
+.open-btn {
+    background: linear-gradient(45deg, #ff6b35, #f7931e);
+    color: white;
+}
+
+.open-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+.inventory-btn {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.stats-btn {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+/* Анимация открытия кейса */
+.case-opening {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.case-content {
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    padding: 30px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 2px solid #ffd700;
+    max-width: 350px;
+    width: 100%;
+}
+
+.item-reveal {
+    margin-top: 20px;
+}
+
+.rarity-common { color: #b0c3d9; }
+.rarity-rare { color: #5e98d9; }
+.rarity-epic { color: #8847ff; }
+.rarity-legendary { color: #eb4b4b; }
+.rarity-mythical { 
+    color: #ffd700; 
+    text-shadow: 0 0 10px rgba(255,215,0,0.5);
+}
+
+.continue-btn {
+    background: #ff6b35;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    margin-top: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Инвентарь */
+.inventory-screen, .stats-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #1a1f2e;
+    padding: 20px;
+    display: none;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.inventory-header, .stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.back-btn {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.inventory-item {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid;
+}
+
+.inventory-item.common { border-left-color: #b0c3d9; }
+.inventory-item.rare { border-left-color: #5e98d9; }
+.inventory-item.epic { border-left-color: #8847ff; }
+.inventory-item.legendary { border-left-color: #eb4b4b; }
+.inventory-item.mythical { border-left-color: #ffd700; }
+
+/* Анимации */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 0.5s infinite;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease;
+}

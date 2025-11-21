@@ -1,0 +1,10 @@
+{
+    "name": "CS2 Case Simulator",
+    "short_name": "CS2 Cases",
+    "description": "Открывай кейсы CS2 и собирай коллекцию скинов",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "theme_color": "#ff6b35",
+    "background_color": "#1a1f2e",
+    "display": "standalone"
+}
