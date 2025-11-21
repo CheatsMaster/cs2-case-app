@@ -1,23 +1,77 @@
 class CS2CaseSimulator {
     constructor() {
-        this.userData = this.loadUserData();
+        this.userData = null;
         this.selectedCase = null;
+        this.tg = null;
         this.init();
     }
 
-    init() {
-        this.setupEventListeners();
-        this.updateUI();
-        
+    async init() {
         // Инициализация Telegram Web App
         if (window.Telegram && window.Telegram.WebApp) {
             this.tg = window.Telegram.WebApp;
             this.tg.expand();
             this.tg.enableClosingConfirmation();
+            
+            // Получаем данные пользователя из бэкенда
+            await this.loadUserData();
+        } else {
+            // Режим разработки - локальные данные
+            this.userData = this.loadLocalData();
+        }
+        
+        this.setupEventListeners();
+        this.updateUI();
+    }
+
+    async loadUserData() {
+        try {
+            const response = await fetch('/api/user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    initData: this.tg.initData
+                })
+            });
+            
+            if (response.ok) {
+                this.userData = await response.json();
+            } else {
+                throw new Error('Failed to load user data');
+            }
+        } catch (error) {
+            console.error('Error loading user data:', error);
+            // Fallback на локальные данные
+            this.userData = this.loadLocalData();
         }
     }
 
-    loadUserData() {
+    async saveUserData() {
+        if (!this.tg) {
+            this.saveLocalData();
+            return;
+        }
+
+        try {
+            await fetch('/api/user/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    initData: this.tg.initData,
+                    userData: this.userData
+                })
+            });
+        } catch (error) {
+            console.error('Error saving user data:', error);
+            this.saveLocalData();
+        }
+    }
+
+    loadLocalData() {
         const saved = localStorage.getItem('cs2_user_data');
         if (saved) {
             return JSON.parse(saved);
@@ -29,6 +83,7 @@ class CS2CaseSimulator {
             stats: {
                 casesOpened: 0,
                 totalSpent: 0,
+                totalEarned: 0,
                 itemsByRarity: {
                     common: 0,
                     rare: 0,
@@ -40,7 +95,7 @@ class CS2CaseSimulator {
         };
     }
 
-    saveUserData() {
+    saveLocalData() {
         localStorage.setItem('cs2_user_data', JSON.stringify(this.userData));
     }
 
@@ -75,6 +130,15 @@ class CS2CaseSimulator {
             this.hideStats();
         });
 
+        // Лидерборд
+        document.getElementById('leaderboardBtn').addEventListener('click', () => {
+            this.showLeaderboard();
+        });
+
+        document.getElementById('leaderboardBack').addEventListener('click', () => {
+            this.hideLeaderboard();
+        });
+
         // Продолжить после открытия кейса
         document.getElementById('continueBtn').addEventListener('click', () => {
             this.hideCaseOpening();
@@ -84,15 +148,12 @@ class CS2CaseSimulator {
     selectCase(caseType) {
         this.selectedCase = caseType;
         
-        // Снимаем выделение
         document.querySelectorAll('.case-card').forEach(card => {
             card.classList.remove('selected');
         });
         
-        // Выделяем выбранный
         document.querySelector(`[data-case="${caseType}"]`).classList.add('selected');
         
-        // Обновляем кнопку
         const caseData = this.getCaseData(caseType);
         document.getElementById('openBtn').textContent = `🎁 Открыть ${caseData.name} (${caseData.price}₽)`;
         document.getElementById('openBtn').disabled = false;
@@ -153,11 +214,6 @@ class CS2CaseSimulator {
             return;
         }
         
-        // Списываем деньги
-        this.userData.balance -= caseData.price;
-        this.userData.stats.casesOpened++;
-        this.userData.stats.totalSpent += caseData.price;
-        
         // Показываем экран открытия
         this.showCaseOpening();
         
@@ -167,15 +223,55 @@ class CS2CaseSimulator {
         // Получаем предмет
         const item = this.getRandomItem(caseData.items);
         
+        // Обновляем данные пользователя
+        this.userData.balance -= caseData.price;
+        this.userData.balance += item.price; // Добавляем стоимость предмета к балансу
+        
+        this.userData.stats.casesOpened++;
+        this.userData.stats.totalSpent += caseData.price;
+        this.userData.stats.totalEarned += item.price;
+        
         // Добавляем в инвентарь
-        this.userData.inventory.push(item);
+        const inventoryItem = {
+            ...item,
+            id: Date.now() + Math.random(),
+            wear: this.getRandomWear(),
+            unboxedAt: new Date().toISOString(),
+            caseType: this.selectedCase
+        };
+        
+        this.userData.inventory.push(inventoryItem);
         this.userData.stats.itemsByRarity[item.rarity]++;
         
-        // Сохраняем данные
-        this.saveUserData();
+        // Сохраняем в базу данных
+        await this.saveCaseOpening(caseData, inventoryItem);
         
         // Показываем результат
-        this.showItemResult(item);
+        this.showItemResult(inventoryItem);
+        
+        // Сохраняем обновленные данные
+        await this.saveUserData();
+    }
+
+    async saveCaseOpening(caseData, item) {
+        if (!this.tg) return; // Только если в режиме Telegram
+        
+        try {
+            await fetch('/api/case/open', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    initData: this.tg.initData,
+                    caseType: this.selectedCase,
+                    casePrice: caseData.price,
+                    item: item
+                })
+            });
+        } catch (error) {
+            console.error('Error saving case opening:', error);
+        }
     }
 
     async playOpeningAnimation(caseData) {
@@ -202,12 +298,7 @@ class CS2CaseSimulator {
         for (const item of items) {
             random -= item.probability;
             if (random <= 0) {
-                return {
-                    ...item,
-                    id: Date.now() + Math.random(),
-                    wear: this.getRandomWear(),
-                    unboxedAt: new Date().toISOString()
-                };
+                return item;
             }
         }
         
@@ -293,6 +384,7 @@ class CS2CaseSimulator {
                     <strong>${item.name}</strong>
                     <div>${this.getRarityText(item.rarity)} • ${item.wear.emoji} ${item.wear.name}</div>
                     <div>💰 ${item.price}₽ ${item.count > 1 ? `× ${item.count}` : ''}</div>
+                    <small>Открыт: ${new Date(item.unboxedAt).toLocaleDateString()}</small>
                 </div>
             `).join('');
         }
@@ -304,17 +396,29 @@ class CS2CaseSimulator {
         document.getElementById('inventoryScreen').style.display = 'none';
     }
 
-    showStats() {
+    async showStats() {
         const stats = this.userData.stats;
         const totalValue = this.userData.inventory.reduce((sum, item) => sum + item.price, 0);
         
+        // Загружаем глобальную статистику
+        let globalStats = {};
+        try {
+            const response = await fetch('/api/stats/global');
+            if (response.ok) {
+                globalStats = await response.json();
+            }
+        } catch (error) {
+            console.error('Error loading global stats:', error);
+        }
+        
         document.getElementById('statsContent').innerHTML = `
             <div class="balance-card">
-                <div>📈 Общая статистика</div>
+                <div>📈 Ваша статистика</div>
                 <div style="margin-top: 15px;">
                     <div>🎯 Открыто кейсов: <strong>${stats.casesOpened}</strong></div>
                     <div>💸 Потрачено всего: <strong>${stats.totalSpent}₽</strong></div>
-                    <div>💵 Текущий баланс: <strong>${this.userData.balance}₽</strong></div>
+                    <div>💰 Заработано: <strong>${stats.totalEarned}₽</strong></div>
+                    <div>💵 Чистая прибыль: <strong>${stats.totalEarned - stats.totalSpent}₽</strong></div>
                     <div>📊 Стоимость инвентаря: <strong>${totalValue}₽</strong></div>
                 </div>
             </div>
@@ -327,6 +431,14 @@ class CS2CaseSimulator {
                     </div>
                 `).join('')}
             </div>
+            
+            ${globalStats.totalCases ? `
+            <div style="margin-top: 20px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                <h3>🌍 Глобальная статистика:</h3>
+                <div>Всего открыто кейсов: <strong>${globalStats.totalCases}</strong></div>
+                <div>Всего выбито предметов: <strong>${globalStats.totalItems}</strong></div>
+            </div>
+            ` : ''}
         `;
         
         document.getElementById('statsScreen').style.display = 'block';
@@ -336,10 +448,46 @@ class CS2CaseSimulator {
         document.getElementById('statsScreen').style.display = 'none';
     }
 
+    async showLeaderboard() {
+        try {
+            const response = await fetch('/api/leaderboard');
+            let leaderboard = [];
+            
+            if (response.ok) {
+                leaderboard = await response.json();
+            }
+            
+            const leaderboardContent = document.getElementById('leaderboardContent');
+            
+            if (leaderboard.length === 0) {
+                leaderboardContent.innerHTML = '<p style="text-align: center; opacity: 0.7;">Таблица лидеров пуста</p>';
+            } else {
+                leaderboardContent.innerHTML = leaderboard.map((user, index) => `
+                    <div class="leaderboard-item ${index < 3 ? 'top-' + (index + 1) : ''}">
+                        <div class="leaderboard-rank">${index + 1}</div>
+                        <div class="leaderboard-user">
+                            <strong>${user.username || 'Аноним'}</strong>
+                            <div>Открыто кейсов: ${user.cases_opened}</div>
+                        </div>
+                        <div class="leaderboard-score">${user.total_value}₽</div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('leaderboardScreen').style.display = 'block';
+        } catch (error) {
+            console.error('Error loading leaderboard:', error);
+            document.getElementById('leaderboardContent').innerHTML = '<p style="text-align: center; color: #ff6b6b;">Ошибка загрузки</p>';
+        }
+    }
+
+    hideLeaderboard() {
+        document.getElementById('leaderboardScreen').style.display = 'none';
+    }
+
     updateUI() {
         document.getElementById('balance').textContent = `${this.userData.balance}₽`;
         
-        // Обновляем кнопку открытия
         const openBtn = document.getElementById('openBtn');
         if (!this.selectedCase) {
             openBtn.textContent = '🎁 Выберите кейс';
@@ -348,8 +496,27 @@ class CS2CaseSimulator {
     }
 
     showNotification(message, type = 'info') {
-        // Простое уведомление через alert
-        alert(message);
+        // Создаем уведомление
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${type === 'error' ? '#ff6b6b' : '#4ecdc4'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 10000;
+            animation: slideDown 0.3s ease;
+        `;
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
     }
 
     sleep(ms) {
@@ -357,7 +524,7 @@ class CS2CaseSimulator {
     }
 }
 
-// Запуск приложения когда DOM загружен
+// Запуск приложения
 document.addEventListener('DOMContentLoaded', () => {
     window.cs2App = new CS2CaseSimulator();
 });
